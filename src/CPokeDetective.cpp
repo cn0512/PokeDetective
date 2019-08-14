@@ -13,7 +13,7 @@ CPokeDetective::~CPokeDetective()
 
 void CPokeDetective::getPXSum(Mat &src, int &a)
 {
-	threshold(src, src, 100, 255, CV_THRESH_BINARY);
+	threshold(src, src, 100, 255, THRESH_BINARY);
 	a = 0;
 	for (int i = 0; i < src.rows; i++)
 	{
@@ -34,8 +34,8 @@ int  CPokeDetective::getTemplete(Mat &src, int TemplateNum)
 		char name[33];
 		sprintf_s(name, "./pokes/%d.png", i+1);
 		Mat Template = imread(name);
-		resize(src, src, Size(CARD_W_X, CARD_H_X), 0, 0, CV_INTER_LINEAR);
-		resize(Template, Template, Size(CARD_W_X, CARD_H_X), 0, 0, CV_INTER_LINEAR);//调整尺寸		
+		resize(src, src, Size(CARD_W_X, CARD_H_X), 0, 0, INTER_LINEAR);
+		resize(Template, Template, Size(CARD_W_X, CARD_H_X), 0, 0, INTER_LINEAR);//调整尺寸		
 		absdiff(Template, src, img_result);//  
 		getPXSum(img_result, diff);
 		if (diff < min)
