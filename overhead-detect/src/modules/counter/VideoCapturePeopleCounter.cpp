@@ -22,6 +22,7 @@ public:
     Line refLine;
     Line refLine2;
 	IAlarm * m_pAlarm;
+	int m_nDeviceIdx;
 
     int peopleWhoEnteredCount = 0;
     int peopleWhoExitedCount = 0;
@@ -33,9 +34,10 @@ public:
         this->videoCapturePath = videoCapturePath;
     }
 
-	VideoCapturePeopleCounter(IAlarm*alarm) {
+	VideoCapturePeopleCounter(IAlarm*alarm,int deviceIdx) {
 		this->backgroundSubstractor = createBackgroundSubtractorMOG2();
 		m_pAlarm = alarm;
+		m_nDeviceIdx = deviceIdx;
 	}
 
     ~VideoCapturePeopleCounter() {
@@ -57,7 +59,7 @@ public:
         Mat frame;
         //VideoCapture videoCapture(videoCapturePath);
 		VideoCapture videoCapture;
-		videoCapture.open(0);
+		videoCapture.open(m_nDeviceIdx);
 		videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, S_W);//宽度
 		videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, S_H);//高度
 		//videoCapture.set(CV_CAP_PROP_FPS, 30);//帧数

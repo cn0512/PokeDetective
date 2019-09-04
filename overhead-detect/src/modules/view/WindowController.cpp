@@ -31,10 +31,12 @@ public:
         window
             ->setGridCellTitle(0, 0, "Output")
             ->setGridCellTitle(0, 1, "Debug")
-            ->setSize(1600, 600)
+            //->setSize(1600, 600)
+			->setSize(1920, 720)
             ->show();
             //->addTrackbar("Opening", &o, 32)
             //->addTrackbar("Closing", &c, 32);
+
     }
 
     // VideoCapturePeopleCounterDelegate methods
