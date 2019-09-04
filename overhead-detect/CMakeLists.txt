@@ -14,3 +14,5 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(people-counter src/main.cpp)
 
 target_link_libraries(people-counter ${OpenCV_LIBS})
+
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin/)

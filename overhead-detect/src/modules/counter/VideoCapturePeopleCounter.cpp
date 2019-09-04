@@ -5,11 +5,23 @@ using namespace std::chrono;
 
 #define PERSON_MIN_CONTOUR_AREA 2000
 
+#define S_W 1280
+#define S_H 720
+//#define S_W 640
+//#define S_H 480
+
+class IAlarm{
+public:
+	virtual void alarm() = 0;
+};
+
 class VideoCapturePeopleCounter {
 
 public:
 
     Line refLine;
+    Line refLine2;
+	IAlarm * m_pAlarm;
 
     int peopleWhoEnteredCount = 0;
     int peopleWhoExitedCount = 0;
@@ -21,8 +33,9 @@ public:
         this->videoCapturePath = videoCapturePath;
     }
 
-	VideoCapturePeopleCounter() {
+	VideoCapturePeopleCounter(IAlarm*alarm) {
 		this->backgroundSubstractor = createBackgroundSubtractorMOG2();
+		m_pAlarm = alarm;
 	}
 
     ~VideoCapturePeopleCounter() {
@@ -30,8 +43,12 @@ public:
 
     // setters
 
-    void setRefLineY(int y) {
+    void setRefLineY(int y,int y2) {
         refLineY = y;
+		refLineY2 = y2;
+
+		//refLineY = S_H / 4;
+  //      refLineY2= S_H *3 / 4;
     }
 
     // member methods
@@ -40,11 +57,22 @@ public:
         Mat frame;
         //VideoCapture videoCapture(videoCapturePath);
 		VideoCapture videoCapture;
-		videoCapture.open(1);
+		videoCapture.open(0);
+		videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, S_W);//宽度
+		videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, S_H);//高度
+		//videoCapture.set(CV_CAP_PROP_FPS, 30);//帧数
+		//videoCapture.set(CV_CAP_PROP_BRIGHTNESS, 1);//亮度 1
+		//videoCapture.set(CV_CAP_PROP_CONTRAST, 40);//对比度 40
+		//videoCapture.set(CV_CAP_PROP_SATURATION, 50);//饱和度 50
+		//videoCapture.set(CV_CAP_PROP_HUE, 50);//色调 50
+		//videoCapture.set(CV_CAP_PROP_EXPOSURE, 50);//曝光 50
+
         while (videoCapture.isOpened()) {
             if (!videoCapture.read(frame)) break;
-            if (++frameNumber == 1) refLine = Line(0, refLineY, frame.cols, refLineY);
-            
+            if (++frameNumber == 1) {
+                refLine = Line(0, refLineY, frame.cols, refLineY);
+                refLine2 = Line(0, refLineY2, frame.cols, refLineY2);
+            }
             // erase old contours (seen 16 frames ago)
             unregisterPersonIf([&](const Person* p) {
                 return frameNumber - lastFrameWherePersonWasSeen[p] > 16;
@@ -105,7 +133,7 @@ private:
     Ptr<BackgroundSubtractor> backgroundSubstractor;
     string videoCapturePath;
 
-    int refLineY;
+    int refLineY,refLineY2;
 
     int frameNumber = 0;
     map<const Person*, int> lastFrameWherePersonWasSeen;
@@ -115,9 +143,17 @@ private:
         int direction;
         
         if (isPersonCrossingTheRefLine(person, refLine, &direction)) {
+            if (direction == LINE_DIRECTION_DOWN) peopleWhoEnteredCount++;
+            else if (direction == LINE_DIRECTION_UP) peopleWhoExitedCount++;
+        }
+        if (isPersonCrossingTheRefLine(person, refLine2, &direction)) {
             if (direction == LINE_DIRECTION_UP) peopleWhoEnteredCount++;
             else if (direction == LINE_DIRECTION_DOWN) peopleWhoExitedCount++;
         }
+
+		if (m_pAlarm && peopleWhoEnteredCount > 0) {
+			m_pAlarm->alarm();
+		}
     }
     
     bool isPersonCrossingTheRefLine(const Person* person, Line line, int* direction = NULL) {
