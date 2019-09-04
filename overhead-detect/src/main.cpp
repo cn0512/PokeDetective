@@ -105,10 +105,13 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    if (argc < 4) return help();
-	int deviceIdx = atoi(argv[1]);
-	int y1 = atoi(argv[2]);
-	int y2 = atoi(argv[3]);
+	const int params = 5;
+    if (argc < params) return help();
+	int type = atoi(argv[1]);
+	int deviceIdx = atoi(argv[2]);
+	int y1 = atoi(argv[3]);
+	int y2 = atoi(argv[4]);
+	char* vedioFile = argv[5];
 	CAlarm * pAlarm = new CAlarm();
 	BOOL ret = player.Open("warn.wav");
 	if (TRUE == ret) {
@@ -118,9 +121,13 @@ int main(int argc, char* argv[]) {
 	else {
 		printf("player open err\n");
 	}
-
-    //VideoCapturePeopleCounter* counter = new VideoCapturePeopleCounter(argv[1]);
-	VideoCapturePeopleCounter* counter = new VideoCapturePeopleCounter(pAlarm, deviceIdx);
+	VideoCapturePeopleCounter* counter = NULL;
+	if (type == 1) {
+		counter = new VideoCapturePeopleCounter(vedioFile, pAlarm);
+	}
+	else {
+		counter = new VideoCapturePeopleCounter(pAlarm, deviceIdx);
+	}
     counter->delegate = new WindowController(counter);
     //counter->setRefLineY(180,540);
 	counter->setRefLineY(y1, y2);

@@ -23,21 +23,26 @@ public:
     Line refLine2;
 	IAlarm * m_pAlarm;
 	int m_nDeviceIdx;
+	int m_type;
 
     int peopleWhoEnteredCount = 0;
     int peopleWhoExitedCount = 0;
     
     VideoCapturePeopleCounterDelegate* delegate;
     
-    VideoCapturePeopleCounter(const string& videoCapturePath) {
+    VideoCapturePeopleCounter(const string& videoCapturePath,IAlarm*alarm) {
         this->backgroundSubstractor = createBackgroundSubtractorMOG2();
         this->videoCapturePath = videoCapturePath;
+		m_type = 1;
+		m_pAlarm = alarm;
+		m_nDeviceIdx = 0;
     }
 
 	VideoCapturePeopleCounter(IAlarm*alarm,int deviceIdx) {
 		this->backgroundSubstractor = createBackgroundSubtractorMOG2();
 		m_pAlarm = alarm;
 		m_nDeviceIdx = deviceIdx;
+		m_type = 0;
 	}
 
     ~VideoCapturePeopleCounter() {
@@ -57,6 +62,24 @@ public:
 
     void start() {
         Mat frame;
+		if (m_type == 1) {
+			VideoCapture videoCapture(videoCapturePath);
+			while (videoCapture.isOpened()) {
+				if (!videoCapture.read(frame)) break;
+				if (++frameNumber == 1) {
+					refLine = Line(0, refLineY, frame.cols, refLineY);
+					refLine2 = Line(0, refLineY2, frame.cols, refLineY2);
+				}
+				// erase old contours (seen 16 frames ago)
+				unregisterPersonIf([&](const Person* p) {
+					return frameNumber - lastFrameWherePersonWasSeen[p] > 16;
+				});
+
+				// and then process the current frame
+				processFrame(frame);
+			}
+			return;
+		}
         //VideoCapture videoCapture(videoCapturePath);
 		VideoCapture videoCapture;
 		videoCapture.open(m_nDeviceIdx);
@@ -142,18 +165,19 @@ private:
     map<const Person*, vector<Line> > linesCrossedByPerson;
 
     void countIfPersonIsCrossingTheRefLine(const Person* person) {
-        int direction;
+        int direction = 0;
         
-        if (isPersonCrossingTheRefLine(person, refLine, &direction)) {
-            if (direction == LINE_DIRECTION_DOWN) peopleWhoEnteredCount++;
-            else if (direction == LINE_DIRECTION_UP) peopleWhoExitedCount++;
-        }
-        if (isPersonCrossingTheRefLine(person, refLine2, &direction)) {
+        //if (isPersonCrossingTheRefLine(person, refLine, &direction)) {
+        //    if (direction == LINE_DIRECTION_DOWN) peopleWhoEnteredCount++;
+        //    else if (direction == LINE_DIRECTION_UP) peopleWhoExitedCount++;
+        //}
+
+        if (isPersonCrossingTheRefLine2(person, refLine,refLine2, &direction)) {
             if (direction == LINE_DIRECTION_UP) peopleWhoEnteredCount++;
             else if (direction == LINE_DIRECTION_DOWN) peopleWhoExitedCount++;
         }
 
-		if (m_pAlarm && peopleWhoEnteredCount > 0) {
+		if (m_pAlarm && direction!=0 && peopleWhoEnteredCount > 0) {
 			m_pAlarm->alarm();
 		}
     }
@@ -180,6 +204,29 @@ private:
 
         return false;
     }
+
+	bool isPersonCrossingTheRefLine2(const Person* person, Line line, Line line2, int* direction = NULL) {
+		for (int i = 0; i < linesCrossedByPerson[person].size(); i++) {
+			if (line == linesCrossedByPerson[person][i]) {
+				return false;
+			}
+		}
+
+		if (person->trace.size() > 2) {
+			for (int i = 0; i < person->trace.size() - 2; i++) {
+				if (intersect(person->trace[i], person->trace[i + 1], line.start, line.end)) {
+					if (direction != NULL) {
+						*direction = person->trace[i].y > line.start.y && person->trace[i].y < line2.start.y ? LINE_DIRECTION_UP : LINE_DIRECTION_DOWN;
+					}
+
+					linesCrossedByPerson[person].push_back(line);
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
     
     void processFrame(const Mat& frame) {
         Mat tempFrame;
